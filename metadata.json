@@ -1,0 +1,6 @@
+{
+  "name": "SecureNotes",
+  "description": "Offline-first note-taking app with rich text, image attachments, biometric security, and device-to-device note export in Material You design.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
