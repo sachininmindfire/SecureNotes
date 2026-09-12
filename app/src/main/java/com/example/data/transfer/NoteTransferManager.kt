@@ -1,5 +1,6 @@
 package com.example.data.transfer
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -236,5 +237,50 @@ object NoteTransferManager {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(chooser)
+    }
+
+    /**
+     * Shares the SecureNotes APK file directly via Android Sharesheet (Quick Share, Bluetooth, etc.).
+     */
+    fun shareAppApk(context: Context): Boolean {
+        return try {
+            val sourcePath = context.applicationInfo.sourceDir
+            if (sourcePath.isNullOrBlank()) return false
+
+            val sourceFile = File(sourcePath)
+            if (!sourceFile.exists()) return false
+
+            val apkDir = File(context.cacheDir, "apk")
+            if (!apkDir.exists()) apkDir.mkdirs()
+
+            val targetApk = File(apkDir, "SecureNotes.apk")
+            if (!targetApk.exists() || targetApk.length() != sourceFile.length()) {
+                sourceFile.copyTo(targetApk, overwrite = true)
+            }
+
+            val uri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                targetApk
+            )
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/vnd.android.package-archive"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "SecureNotes APK")
+                putExtra(Intent.EXTRA_TEXT, "SecureNotes offline app installation APK")
+                clipData = ClipData.newRawUri("SecureNotes APK", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(intent, "Share SecureNotes APK via...").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

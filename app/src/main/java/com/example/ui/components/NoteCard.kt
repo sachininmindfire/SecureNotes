@@ -264,6 +264,112 @@ fun NoteCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun NoteListItem(
+    note: NoteEntity,
+    isUnlocked: Boolean,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onNoteClick: () -> Unit,
+    onNoteLongClick: () -> Unit,
+    onToggleSelect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = isSystemInDarkTheme()
+    val colorStyle = getNoteColorStyle(note.colorKey)
+    val cardBg = if (isDark) colorStyle.darkBg else colorStyle.lightBg
+    val cardText = if (isDark) colorStyle.darkText else colorStyle.lightText
+    val borderColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        if (isDark) colorStyle.borderDark else colorStyle.borderLight
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        onToggleSelect()
+                    } else {
+                        onNoteClick()
+                    }
+                },
+                onLongClick = onNoteLongClick
+            )
+            .testTag("note_card_${note.id}"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Title (Single line)
+                Text(
+                    text = if (note.title.isBlank()) "Untitled Note" else note.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = cardText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (note.isLocked) {
+                    Icon(
+                        imageVector = if (isUnlocked) Icons.Outlined.Lock else Icons.Default.Lock,
+                        contentDescription = if (isUnlocked) "Unlocked" else "Locked",
+                        tint = if (isUnlocked) cardText.copy(alpha = 0.6f) else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                if (note.isPinned) {
+                    Icon(
+                        imageVector = Icons.Default.PushPin,
+                        contentDescription = "Pinned",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                if (isSelectionMode) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = if (isSelected) "Selected" else "Not selected",
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else cardText.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text(
+                        text = formatRelativeDate(note.modifiedTimestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cardText.copy(alpha = 0.55f)
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun formatRelativeDate(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp

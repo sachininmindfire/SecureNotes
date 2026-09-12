@@ -49,9 +49,30 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     private val _filterOnlyLocked = MutableStateFlow(false)
     val filterOnlyLocked: StateFlow<Boolean> = _filterOnlyLocked.asStateFlow()
 
-    // UI View layout: true = 2-column grid, false = 1-column list
-    private val _isGridView = MutableStateFlow(true)
+    private val appPrefs = application.getSharedPreferences("secure_notes_app_prefs", Context.MODE_PRIVATE)
+
+    // UI View layout: true = 2-column grid, false = 1-column list (persisted)
+    private val _isGridView = MutableStateFlow(
+        appPrefs.getBoolean("key_is_grid_view", true)
+    )
     val isGridView: StateFlow<Boolean> = _isGridView.asStateFlow()
+
+    // Gemini API Key (persisted securely on-device in app preferences)
+    private val _geminiApiKey = MutableStateFlow(
+        appPrefs.getString("key_gemini_api_key", "") ?: ""
+    )
+    val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
+
+    fun setGeminiApiKey(key: String) {
+        val trimmed = key.trim()
+        appPrefs.edit().putString("key_gemini_api_key", trimmed).apply()
+        _geminiApiKey.value = trimmed
+        _userMessage.value = if (trimmed.isNotEmpty()) "Gemini API key saved" else "Gemini API key removed"
+    }
+
+    fun getGeminiApiKey(): String {
+        return _geminiApiKey.value
+    }
 
     // Multi-selection state
     private val _selectedNoteIds = MutableStateFlow<Set<Long>>(emptySet())
@@ -105,7 +126,9 @@ class NotesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleViewLayout() {
-        _isGridView.value = !_isGridView.value
+        val next = !_isGridView.value
+        _isGridView.value = next
+        appPrefs.edit().putBoolean("key_is_grid_view", next).apply()
     }
 
     fun navigateToDetail(noteId: Long?) {

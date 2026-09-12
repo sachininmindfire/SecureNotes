@@ -16,16 +16,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -321,34 +320,27 @@ fun NoteDetailScreen(
         },
         bottomBar = {
             if (!isReadMode) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .imePadding()
-                        .navigationBarsPadding()
-                ) {
-                    RichTextEditorToolbar(
-                        textFieldValue = contentValue,
-                        onValueChange = { contentValue = it },
-                        onAddImageClick = {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        onColorPickerClick = { showColorDialog = true },
-                        isLocked = isLocked,
-                        onToggleLock = {
-                            if (!isLocked) {
-                                onTriggerBiometricLockChange(true) { if (it) isLocked = true }
-                            } else {
-                                onTriggerBiometricLockChange(false) { if (it) isLocked = false }
-                            }
+                RichTextEditorToolbar(
+                    textFieldValue = contentValue,
+                    onValueChange = { contentValue = it },
+                    onAddImageClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    onColorPickerClick = { showColorDialog = true },
+                    isLocked = isLocked,
+                    onToggleLock = {
+                        if (!isLocked) {
+                            onTriggerBiometricLockChange(true) { if (it) isLocked = true }
+                        } else {
+                            onTriggerBiometricLockChange(false) { if (it) isLocked = false }
                         }
-                    )
-                }
+                    }
+                )
             }
         },
-        contentWindowInsets = WindowInsets.statusBars
+        contentWindowInsets = WindowInsets.statusBars.union(WindowInsets.navigationBars)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -393,6 +385,7 @@ fun NoteDetailScreen(
                     )
                 },
                 textStyle = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, color = textColor),
+                singleLine = true,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -538,10 +531,12 @@ fun NoteDetailScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(400.dp)
+                        .defaultMinSize(minHeight = 240.dp)
                         .testTag("note_content_input")
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 

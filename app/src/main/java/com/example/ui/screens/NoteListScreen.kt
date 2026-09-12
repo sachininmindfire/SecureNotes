@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -60,8 +62,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -83,13 +83,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.NoteEntity
 import com.example.ui.components.ExportImportSheet
 import com.example.ui.components.NoteCard
+import com.example.ui.components.NoteListItem
+import com.example.ui.components.SettingsDialog
 import com.example.ui.components.SideloadingHelpDialog
 import com.example.ui.viewmodel.NotesViewModel
 import kotlinx.coroutines.launch
@@ -122,6 +128,7 @@ fun NoteListScreen(
 
     var showExportSheet by remember { mutableStateOf(false) }
     var showSideloadDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val exportSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val categories = listOf("All", "General", "Work", "Personal", "Ideas", "Finance", "Private")
@@ -183,23 +190,28 @@ fun NoteListScreen(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(34.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Lock,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "SecureNotes",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     },
@@ -209,7 +221,9 @@ fun NoteListScreen(
                             onClick = {
                                 onToggleMasterLock(!isMasterLockEnabled)
                             },
-                            modifier = Modifier.testTag("btn_master_lock_toggle")
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("btn_master_lock_toggle")
                         ) {
                             Icon(
                                 imageVector = if (isMasterLockEnabled) Icons.Default.Fingerprint else Icons.Default.LockOpen,
@@ -221,7 +235,9 @@ fun NoteListScreen(
                         // Export / Transfer / Import
                         IconButton(
                             onClick = { showExportSheet = true },
-                            modifier = Modifier.testTag("btn_export_transfer")
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("btn_export_transfer")
                         ) {
                             Icon(Icons.Default.Share, contentDescription = "Share or Export Notes")
                         }
@@ -229,9 +245,21 @@ fun NoteListScreen(
                         // Sideloading Help
                         IconButton(
                             onClick = { showSideloadDialog = true },
-                            modifier = Modifier.testTag("btn_sideload_help")
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("btn_sideload_help")
                         ) {
                             Icon(Icons.Default.Android, contentDescription = "Sideloading Guide")
+                        }
+
+                        // Settings (Gemini API Key, etc.)
+                        IconButton(
+                            onClick = { showSettingsDialog = true },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .testTag("btn_settings")
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -260,49 +288,84 @@ fun NoteListScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Search Bar
-            Box(
+            // Compact 1-Liner Search Bar
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .height(44.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
             ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { viewModel.onSearchQueryChange(it) },
-                    placeholder = { Text("Search notes, tags, checklists...") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.onSearchQueryChange("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear search")
-                            }
-                        } else {
-                            IconButton(onClick = { viewModel.toggleViewLayout() }) {
-                                Icon(
-                                    imageVector = if (isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
-                                    contentDescription = "Toggle Grid/List view"
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary
-                    ),
+                Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("search_notes_input")
-                )
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search notes...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.onSearchQueryChange(it) },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("search_notes_input")
+                        )
+                    }
+
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onSearchQueryChange("") },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear search",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { viewModel.toggleViewLayout() },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                                contentDescription = "Toggle Grid/List view",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
             // Filter Chips Bar (Categories + Pinned + Locked)
@@ -470,14 +533,14 @@ fun NoteListScreen(
                             top = 8.dp,
                             bottom = 88.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(notes, key = { it.id }) { note ->
                             val isUnlocked = !note.isLocked || unlockedNoteIds.contains(note.id)
                             val isSelected = selectedNoteIds.contains(note.id)
 
-                            NoteCard(
+                            NoteListItem(
                                 note = note,
                                 isUnlocked = isUnlocked,
                                 isSelectionMode = isSelectionMode,
@@ -488,8 +551,7 @@ fun NoteListScreen(
                                 },
                                 onToggleSelect = {
                                     viewModel.toggleNoteSelection(note.id)
-                                },
-                                getImageFile = { filename -> viewModel.getImageFile(filename) }
+                                }
                             )
                         }
                     }
@@ -521,6 +583,14 @@ fun NoteListScreen(
     if (showSideloadDialog) {
         SideloadingHelpDialog(
             onDismiss = { showSideloadDialog = false }
+        )
+    }
+
+    // Settings Dialog (Gemini API Key, etc.)
+    if (showSettingsDialog) {
+        SettingsDialog(
+            viewModel = viewModel,
+            onDismiss = { showSettingsDialog = false }
         )
     }
 }

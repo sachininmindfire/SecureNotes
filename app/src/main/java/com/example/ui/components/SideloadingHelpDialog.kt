@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,14 +38,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.data.transfer.NoteTransferManager
 
 @Composable
 fun SideloadingHelpDialog(
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -136,6 +140,30 @@ fun SideloadingHelpDialog(
                         )
                     }
                 }
+                // Quick Share / Bluetooth APK Transfer Button
+                Button(
+                    onClick = {
+                        val sent = NoteTransferManager.shareAppApk(context)
+                        if (!sent) {
+                            Toast.makeText(context, "Could not extract APK file", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("btn_share_apk_sideload"),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Share APK (Quick Share / Bluetooth)",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
             }
         },
         confirmButton = {
@@ -144,6 +172,25 @@ fun SideloadingHelpDialog(
                 modifier = Modifier.testTag("btn_close_sideload_dialog")
             ) {
                 Text("Got It")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    val sent = NoteTransferManager.shareAppApk(context)
+                    if (!sent) {
+                        Toast.makeText(context, "Could not extract APK file", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                modifier = Modifier.testTag("btn_dismiss_share_apk")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Share APK")
             }
         }
     )
